@@ -52,4 +52,20 @@
  */
 int rte_pmd_bnxt_set_tx_loopback(uint8_t port, uint8_t on);
 
+/**
+ * set all queues drop enable bit
+ *
+ * @param port
+ *    The port identifier of the Ethernet device.
+ * @param on
+ *    1 - set the queue drop enable bit for all pools.
+ *    0 - reset the queue drop enable bit for all pools.
+ *
+ * @return
+ *   - (0) if successful.
+ *   - (-ENODEV) if *port* invalid.
+ *   - (-EINVAL) if bad parameter.
+ */
+int rte_pmd_bnxt_set_all_queues_drop_en(uint8_t port, uint8_t on);
+
 #endif /* _PMD_BNXT_H_ */

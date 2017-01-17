@@ -91,6 +91,7 @@ struct ctx_hw_stats64 {
 #define HWRM_FUNC_QCFG			(UINT32_C(0x16))
 #define HWRM_FUNC_CFG			(UINT32_C(0x17))
 #define HWRM_FUNC_DRV_UNRGTR		(UINT32_C(0x1a))
+#define HWRM_FUNC_VF_VNIC_IDS_QUERY	(UINT32_C(0x1c))
 #define HWRM_FUNC_DRV_RGTR		(UINT32_C(0x1d))
 #define HWRM_FUNC_BUF_RGTR		(UINT32_C(0x1f))
 #define HWRM_PORT_PHY_CFG		(UINT32_C(0x20))
@@ -3062,6 +3063,82 @@ struct hwrm_func_drv_unrgtr_output {
 	 * internal processor, the order of writes has to be such that
 	 * this field is written last.
 	 */
+} __attribute__((packed));
+
+/* hwrm_func_vf_vnic_ids_query */
+/* Description: This command is used to query vf vnic ids. */
+/* Input (32 bytes) */
+struct hwrm_func_vf_vnic_ids_query_input
+{
+    uint16_t req_type;
+    /*
+     * This value indicates what type of request this is. The format for the
+     * rest of the command is determined by this field.
+     */
+    uint16_t cmpl_ring;
+    /*
+     * This value indicates the what completion ring the request will be
+     * optionally completed on. If the value is -1, then no CR completion
+     * will be generated. Any other value must be a valid CR ring_id value
+     * for this function.
+     */
+    uint16_t seq_id;
+    /* This value indicates the command sequence number. */
+    uint16_t target_id;
+    /*
+     * Target ID of this command. 0x0 - 0xFFF8 - Used for function ids
+     * 0xFFF8 - 0xFFFE - Reserved for internal processors 0xFFFF - HWRM
+     */
+    uint64_t resp_addr;
+    /*
+     * This is the host address where the response will be written when the
+     * request is complete. This area must be 16B aligned and must be
+     * cleared to zero before the request is made.
+     */
+    uint16_t vf_id;
+    /*
+     * This value is used to identify a Virtual Function (VF). The scope of
+     * VF ID is local within a PF.
+     */
+    uint8_t unused_0;
+    uint8_t unused_1;
+    uint32_t max_vnic_id_cnt;
+    /* Max number of vnic ids in vnic id table */
+    uint32_t vnic_id_tbl_addr[2];
+    /* This is the address for VF VNIC ID table */
+} __attribute__((packed));
+
+/* Output (16 bytes) */
+struct hwrm_func_vf_vnic_ids_query_output
+{
+	uint16_t error_code;
+    /*
+     * Pass/Fail or error type Note: receiver to verify the in parameters,
+     * and fail the call with an error when appropriate
+     */
+    uint16_t req_type;
+    /* This field returns the type of original request. */
+    uint16_t seq_id;
+    /* This field provides original sequence number of the command. */
+    uint16_t resp_len;
+    /*
+     * This field is the length of the response in bytes. The last byte of
+     * the response is a valid flag that will read as '1' when the command
+     * has been completely written to memory.
+     */
+    uint32_t vnic_id_cnt;
+    /* Actual number of vnic ids Each VNIC ID is written as a 32-bit number. */
+    uint8_t unused_0;
+    uint8_t unused_1;
+    uint8_t unused_2;
+    uint8_t valid;
+    /*
+     * This field is used in Output records to indicate that the output is
+     * completely written to RAM. This field should be read as '1' to
+     * indicate that the output has been completely written. When writing a
+     * command completion or response to an internal processor, the order of
+     * writes has to be such that this field is written last.
+     */
 } __attribute__((packed));
 
 /* hwrm_port_phy_cfg */

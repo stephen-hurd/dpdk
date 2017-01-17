@@ -263,6 +263,16 @@ static int bnxt_init_chip(struct bnxt *bp)
 		}
 	}
 
+	if (BNXT_PF(bp) && bp->pf.active_vfs > 0) {
+		/* Update each VF's start vnic id */
+		uint16_t fw_vnic_id = bp->vnic_info[0].fw_vnic_id + bp->max_vnics;
+		int j;
+		for (j = bp->pf.active_vfs - 1; j >= 0; j--) {
+			bp->pf.vf_start_vnic[j] = fw_vnic_id;
+			fw_vnic_id += bp->pf.vf_max_vnics[j];
+		}
+	}
+
 	return 0;
 
 err_out:
@@ -819,6 +829,51 @@ int rte_pmd_bnxt_set_tx_loopback(uint8_t port, uint8_t on)
 	}
 
 	return 0;
+}
+
+
+int rte_pmd_bnxt_set_all_queues_drop_en(uint8_t port, uint8_t on)
+{
+	struct rte_eth_dev 		*eth_dev;
+	struct bnxt 			*bp;
+	struct bnxt_vnic_info	*vnic;
+	int						 i;
+	int						 rc;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port, -ENODEV);
+
+	if (on > 1)
+		return -EINVAL;
+
+	eth_dev = &rte_eth_devices[port];
+	bp = (struct bnxt *)eth_dev->data->dev_private;
+
+	if (!BNXT_PF(bp)) {
+		RTE_LOG(ERR, PMD, "Attempt to set all queues drop on none-PF port!\n");
+		return -ENOTSUP;
+	}
+
+	if (bp->vnic_info == NULL)
+		return -ENODEV;
+
+	vnic = &bp->vnic_info[0];
+	if (on)
+		vnic->flags &= ~BNXT_VNIC_INFO_UNICAST;
+	else
+		vnic->flags |= BNXT_VNIC_INFO_UNICAST;
+
+	/* Stall PF */
+	rc = bnxt_hwrm_vnic_stall(bp, vnic->fw_vnic_id, on);
+
+	/* Stall all active VFs */
+	for (i = 0; i < bp->pf.active_vfs; i++) {
+		rc = bnxt_hwrm_func_vf_stall(bp, i, on);
+		if (rc) {
+			RTE_LOG(ERR, PMD, "Failed to update VNIC %d state to: %s.\n", i, on ? "on":"off");
+		}
+	}
+
+	return rc;
 }
 
 static int bnxt_rss_hash_conf_get_op(struct rte_eth_dev *eth_dev,
