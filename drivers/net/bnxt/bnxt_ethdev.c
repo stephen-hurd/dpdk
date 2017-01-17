@@ -52,6 +52,7 @@
 #include "bnxt_txr.h"
 #include "bnxt_vnic.h"
 #include "hsi_struct_def_dpdk.h"
+#include "rte_pmd_bnxt.h"
 
 #define DRV_MODULE_NAME		"bnxt"
 static const char bnxt_version[] =
@@ -809,6 +810,33 @@ static int bnxt_rss_hash_update_op(struct rte_eth_dev *eth_dev,
 			bnxt_hwrm_vnic_rss_cfg(bp, vnic);
 		}
 	}
+	return 0;
+}
+
+int rte_pmd_bnxt_set_tx_loopback(uint8_t port, uint8_t on)
+{
+	struct rte_eth_dev 		*eth_dev;
+	struct bnxt 			*bp;
+
+	RTE_ETH_VALID_PORTID_OR_ERR_RET(port, -ENODEV);
+
+	if (on > 1)
+		return -EINVAL;
+
+	eth_dev = &rte_eth_devices[port];
+	bp = (struct bnxt *)eth_dev->data->dev_private;
+
+	if (!BNXT_PF(bp)) {
+		RTE_LOG(ERR, PMD, "Attempt to operate on none-PF!\n");
+		return -ENOTSUP;
+	}
+
+	/* EVB mode fixed on Virtual Edge Bridge(VEB) */
+	if (on == 0) {
+		RTE_LOG(ERR, PMD, "Turning off Edge Virtual Bridge is not supportted now!\n");
+		return -ENOTSUP;
+	}
+
 	return 0;
 }
 
