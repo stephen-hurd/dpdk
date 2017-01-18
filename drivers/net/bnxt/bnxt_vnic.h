@@ -59,10 +59,10 @@ struct bnxt_vnic_info {
 	uint32_t	flags;
 #define BNXT_VNIC_INFO_PROMISC			(1 << 0)
 #define BNXT_VNIC_INFO_ALLMULTI			(1 << 1)
-#define BNXT_VNIC_INFO_UNICAST			(1 << 2)
 
 	bool		vlan_strip;
 	bool		func_default;
+	bool		bd_stall;
 
 	STAILQ_HEAD(, bnxt_filter_info)	filter;
 };

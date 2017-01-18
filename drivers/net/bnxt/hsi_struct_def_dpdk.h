@@ -3068,8 +3068,7 @@ struct hwrm_func_drv_unrgtr_output {
 /* hwrm_func_vf_vnic_ids_query */
 /* Description: This command is used to query vf vnic ids. */
 /* Input (32 bytes) */
-struct hwrm_func_vf_vnic_ids_query_input
-{
+struct hwrm_func_vf_vnic_ids_query_input {
     uint16_t req_type;
     /*
      * This value indicates what type of request this is. The format for the
@@ -3104,13 +3103,12 @@ struct hwrm_func_vf_vnic_ids_query_input
     uint8_t unused_1;
     uint32_t max_vnic_id_cnt;
     /* Max number of vnic ids in vnic id table */
-    uint32_t vnic_id_tbl_addr[2];
+    uint64_t vnic_id_tbl_addr;
     /* This is the address for VF VNIC ID table */
 } __attribute__((packed));
 
 /* Output (16 bytes) */
-struct hwrm_func_vf_vnic_ids_query_output
-{
+struct hwrm_func_vf_vnic_ids_query_output {
 	uint16_t error_code;
     /*
      * Pass/Fail or error type Note: receiver to verify the in parameters,
