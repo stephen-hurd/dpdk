@@ -49,6 +49,7 @@
 #include "bnxt_txr.h"
 #include "bnxt_vnic.h"
 #include "hsi_struct_def_dpdk.h"
+#include "hsi_struct_decode.h"
 
 #define HWRM_CMD_TIMEOUT		2000
 
@@ -94,6 +95,7 @@ static int bnxt_hwrm_send_message_locked(struct bnxt *bp, void *msg,
 	uint8_t *bar;
 	uint8_t *valid;
 
+	HWRM_DECODE_INPUT(msg);
 	/* Write request msg to hwrm channel */
 	for (i = 0; i < msg_len; i += 4) {
 		bar = (uint8_t *)bp->bar0 + i;
@@ -130,6 +132,7 @@ static int bnxt_hwrm_send_message_locked(struct bnxt *bp, void *msg,
 			req->req_type);
 		goto err_ret;
 	}
+	HWRM_DECODE_OUTPUT(resp);
 	return 0;
 
 err_ret:

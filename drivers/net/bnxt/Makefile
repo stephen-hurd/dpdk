@@ -41,6 +41,7 @@ LIB = librte_pmd_bnxt.a
 LIBABIVER := 1
 
 CFLAGS += -O3
+CFLAGS += -DHSI_DEBUG -DHSI_INFO
 CFLAGS += $(WERROR_FLAGS)
 
 EXPORT_MAP := rte_pmd_bnxt_version.map
@@ -48,6 +49,7 @@ EXPORT_MAP := rte_pmd_bnxt_version.map
 #
 # all source are stored in SRCS-y
 #
+SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += hsi_struct_decode.c
 SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += bnxt_cpr.c
 SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += bnxt_ethdev.c
 SRCS-$(CONFIG_RTE_LIBRTE_BNXT_PMD) += bnxt_filter.c
