@@ -215,6 +215,7 @@ int bnxt_alloc_rings(struct bnxt *bp, uint16_t qidx,
  */
 int bnxt_alloc_hwrm_rings(struct bnxt *bp)
 {
+	struct rte_pci_device *pci_dev = bp->pdev;
 	unsigned int i;
 	int rc = 0;
 
@@ -232,8 +233,7 @@ int bnxt_alloc_hwrm_rings(struct bnxt *bp)
 					idx, HWRM_NA_SIGNATURE);
 		if (rc)
 			goto err_out;
-		cpr->cp_doorbell =
-		    (char *)bp->eth_dev->pci_dev->mem_resource[2].addr +
+		cpr->cp_doorbell = (char *)pci_dev->mem_resource[2].addr +
 		    idx * 0x80;
 		bp->grp_info[idx].cp_fw_ring_id = cp_ring->fw_ring_id;
 		B_CP_DIS_DB(cpr, cpr->cp_raw_cons);
@@ -245,8 +245,7 @@ int bnxt_alloc_hwrm_rings(struct bnxt *bp)
 		if (rc)
 			goto err_out;
 		rxr->rx_prod = 0;
-		rxr->rx_doorbell =
-		    (char *)bp->eth_dev->pci_dev->mem_resource[2].addr +
+		rxr->rx_doorbell = (char *)pci_dev->mem_resource[2].addr +
 		    idx * 0x80;
 		bp->grp_info[idx].rx_fw_ring_id = ring->fw_ring_id;
 		B_RX_DB(rxr->rx_doorbell, rxr->rx_prod);
@@ -273,8 +272,7 @@ int bnxt_alloc_hwrm_rings(struct bnxt *bp)
 		if (rc)
 			goto err_out;
 
-		cpr->cp_doorbell =
-		    (char *)bp->eth_dev->pci_dev->mem_resource[2].addr +
+		cpr->cp_doorbell = (char *)pci_dev->mem_resource[2].addr +
 		    idx * 0x80;
 		bp->grp_info[idx].cp_fw_ring_id = cp_ring->fw_ring_id;
 		B_CP_DIS_DB(cpr, cpr->cp_raw_cons);
@@ -286,8 +284,7 @@ int bnxt_alloc_hwrm_rings(struct bnxt *bp)
 		if (rc)
 			goto err_out;
 
-		txr->tx_doorbell =
-		    (char *)bp->eth_dev->pci_dev->mem_resource[2].addr +
+		txr->tx_doorbell = (char *)pci_dev->mem_resource[2].addr +
 		    idx * 0x80;
 	}
 

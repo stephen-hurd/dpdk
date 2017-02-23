@@ -68,6 +68,7 @@
 #include <rte_tcp.h>
 #include <rte_udp.h>
 #include <rte_string_fns.h>
+#include <rte_flow.h>
 
 #include "testpmd.h"
 
@@ -239,6 +240,8 @@ pkt_burst_transmit(struct fwd_stream *fs)
 		ol_flags = PKT_TX_VLAN_PKT;
 	if (txp->tx_ol_flags & TESTPMD_TX_OFFLOAD_INSERT_QINQ)
 		ol_flags |= PKT_TX_QINQ_PKT;
+	if (txp->tx_ol_flags & TESTPMD_TX_OFFLOAD_MACSEC)
+		ol_flags |= PKT_TX_MACSEC;
 
 	if (tx_vxlan)
 		ol_flags |= PKT_TX_TUNNEL_VXLAN | PKT_TX_UDP_CKSUM;

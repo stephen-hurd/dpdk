@@ -78,6 +78,7 @@
 #ifdef RTE_LIBRTE_PDUMP
 #include <rte_pdump.h>
 #endif
+#include <rte_flow.h>
 
 #include "testpmd.h"
 
@@ -1548,6 +1549,8 @@ close_port(portid_t pid)
 			continue;
 		}
 
+		if (port->flow_list)
+			port_flow_flush(pi);
 		rte_eth_dev_close(pi);
 
 		if (rte_atomic16_cmpset(&(port->port_status),
@@ -1601,6 +1604,9 @@ detach_port(uint8_t port_id)
 		printf("Please close port first\n");
 		return;
 	}
+
+	if (ports[port_id].flow_list)
+		port_flow_flush(port_id);
 
 	if (rte_eth_dev_detach(port_id, name))
 		return;
