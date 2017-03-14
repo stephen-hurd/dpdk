@@ -333,9 +333,6 @@ static void check_all_ports_link_status(uint32_t port_mask);
  */
 static int all_ports_started(void);
 
-uint8_t tx_geneve = 0;
-uint8_t tx_vxlan = 0;
-
 /*
  * Find next enabled port
  */
