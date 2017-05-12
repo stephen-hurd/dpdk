@@ -40,7 +40,8 @@ struct bnxt;
 struct bnxt_filter_info {
 	STAILQ_ENTRY(bnxt_filter_info)	next;
 	uint64_t		fw_l2_filter_id;
-#define INVALID_MAC_INDEX	((uint16_t)-1)
+#define INVALID_MAC_INDEX	UINT16_C(0xffff)
+#define PROMISC_MAC_INDEX	UINT16_C(0xfffe)
 	uint16_t		mac_index;
 
 	/* Filter Characteristics */
@@ -63,9 +64,12 @@ struct bnxt_filter_info {
 	uint32_t		vni;
 	uint8_t			pri_hint;
 	uint64_t		l2_filter_id_hint;
+	uint32_t		src_id;
+	uint8_t			src_type;
 };
 
 struct bnxt_filter_info *bnxt_alloc_filter(struct bnxt *bp);
+struct bnxt_filter_info *bnxt_alloc_vf_filter(struct bnxt *bp, uint16_t vf);
 void bnxt_init_filters(struct bnxt *bp);
 void bnxt_free_all_filters(struct bnxt *bp);
 void bnxt_free_filter_mem(struct bnxt *bp);

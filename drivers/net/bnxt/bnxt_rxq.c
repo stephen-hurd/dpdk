@@ -45,6 +45,8 @@
 #include "bnxt_vnic.h"
 #include "hsi_struct_def_dpdk.h"
 
+static int bnxt_rx_default_filters(struct bnxt *bp, struct bnxt_vnic_info *vnic);
+
 /*
  * RX Queues
  */
@@ -57,13 +59,36 @@ void bnxt_free_rxq_stats(struct bnxt_rx_queue *rxq)
 		cpr->hw_stats = NULL;
 }
 
+static int bnxt_rx_default_filters(struct bnxt *bp, struct bnxt_vnic_info *vnic)
+{
+	struct bnxt_filter_info *filter;
+
+	/* Now the promiscuous filter */
+	filter = bnxt_alloc_filter(bp);
+	if (!filter) {
+		RTE_LOG(ERR, PMD, "L2 Promiscuous filter alloc failed\n");
+		return -ENOMEM;
+	}
+	memset(filter->l2_addr, 0, sizeof(filter->l2_addr));
+	memcpy(filter->l2_addr_mask, "\x01\x00\x00\x00\x00", sizeof(filter->l2_addr_mask));
+	filter->mac_index = PROMISC_MAC_INDEX;
+	STAILQ_INSERT_TAIL(&vnic->filter, filter, next);
+	/* Finally the MAC filter */
+	filter = bnxt_alloc_filter(bp);
+	if (!filter) {
+		RTE_LOG(ERR, PMD, "L2 filter alloc failed\n");
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
 int bnxt_mq_rx_configure(struct bnxt *bp)
 {
 	struct rte_eth_conf *dev_conf = &bp->eth_dev->data->dev_conf;
 	unsigned int i, j, nb_q_per_grp, ring_idx;
 	int start_grp_id, end_grp_id, rc = 0;
 	struct bnxt_vnic_info *vnic;
-	struct bnxt_filter_info *filter;
 	struct bnxt_rx_queue *rxq;
 
 	bp->nr_vnics = 0;
@@ -76,6 +101,7 @@ int bnxt_mq_rx_configure(struct bnxt *bp)
 			rc = -ENOMEM;
 			goto err_out;
 		}
+		vnic->flags |= BNXT_VNIC_INFO_BCAST;
 		STAILQ_INSERT_TAIL(&bp->ff_pool[0], vnic, next);
 		bp->nr_vnics++;
 
@@ -87,13 +113,9 @@ int bnxt_mq_rx_configure(struct bnxt *bp)
 		vnic->start_grp_id = 1;
 		vnic->end_grp_id = vnic->start_grp_id +
 				   bp->rx_cp_nr_rings - 1;
-		filter = bnxt_alloc_filter(bp);
-		if (!filter) {
-			RTE_LOG(ERR, PMD, "L2 filter alloc failed\n");
-			rc = -ENOMEM;
+		rc = bnxt_rx_default_filters(bp, vnic);
+		if (rc)
 			goto err_out;
-		}
-		STAILQ_INSERT_TAIL(&vnic->filter, filter, next);
 		goto out;
 	}
 
@@ -121,9 +143,11 @@ int bnxt_mq_rx_configure(struct bnxt *bp)
 		}
 		/* For each pool, allocate MACVLAN CFA rule & VNIC */
 		if (!pools) {
+			pools = RTE_MIN(bp->max_vnics,
+			    RTE_MIN(bp->max_l2_ctx,
+			     RTE_MIN(bp->max_rsscos_ctx, ETH_64_POOLS)));
 			RTE_LOG(ERR, PMD,
-				"VMDq pool not set, defaulted to 64\n");
-			pools = ETH_64_POOLS;
+			    "VMDq pool not set, defaulted to %d\n", pools);
 		}
 		nb_q_per_grp = bp->rx_cp_nr_rings / pools;
 		start_grp_id = 1;
@@ -134,10 +158,11 @@ int bnxt_mq_rx_configure(struct bnxt *bp)
 			vnic = bnxt_alloc_vnic(bp);
 			if (!vnic) {
 				RTE_LOG(ERR, PMD,
-					"VNIC alloc failed\n");
+					"VNIC %d alloc failed\n", i);
 				rc = -ENOMEM;
 				goto err_out;
 			}
+			vnic->flags |= BNXT_VNIC_INFO_BCAST;
 			STAILQ_INSERT_TAIL(&bp->ff_pool[i], vnic, next);
 			bp->nr_vnics++;
 
@@ -151,18 +176,13 @@ int bnxt_mq_rx_configure(struct bnxt *bp)
 			vnic->start_grp_id = start_grp_id;
 			vnic->end_grp_id = end_grp_id;
 
-			filter = bnxt_alloc_filter(bp);
-			if (!filter) {
-				RTE_LOG(ERR, PMD,
-					"L2 filter alloc failed\n");
-				rc = -ENOMEM;
+			rc = bnxt_rx_default_filters(bp, vnic);
+			if (rc)
 				goto err_out;
-			}
 			/*
 			 * TODO: Configure & associate CFA rule for
 			 * each VNIC for each VMDq with MACVLAN, MACVLAN+TC
 			 */
-			STAILQ_INSERT_TAIL(&vnic->filter, filter, next);
 
 			start_grp_id = end_grp_id + 1;
 			end_grp_id += nb_q_per_grp;
@@ -178,6 +198,7 @@ int bnxt_mq_rx_configure(struct bnxt *bp)
 		rc = -ENOMEM;
 		goto err_out;
 	}
+	vnic->flags |= BNXT_VNIC_INFO_BCAST;
 	/* Partition the rx queues for the single pool */
 	for (i = 0; i < bp->rx_cp_nr_rings; i++) {
 		rxq = bp->eth_dev->data->rx_queues[i];
@@ -191,13 +212,9 @@ int bnxt_mq_rx_configure(struct bnxt *bp)
 	vnic->start_grp_id = 1;
 	vnic->end_grp_id = vnic->start_grp_id +
 			   bp->rx_cp_nr_rings - 1;
-	filter = bnxt_alloc_filter(bp);
-	if (!filter) {
-		RTE_LOG(ERR, PMD, "L2 filter alloc failed\n");
-		rc = -ENOMEM;
+	rc = bnxt_rx_default_filters(bp, vnic);
+	if (rc)
 		goto err_out;
-	}
-	STAILQ_INSERT_TAIL(&vnic->filter, filter, next);
 
 	if (dev_conf->rxmode.mq_mode & ETH_MQ_RX_RSS_FLAG)
 		vnic->hash_type =
@@ -273,7 +290,7 @@ int bnxt_rx_queue_setup_op(struct rte_eth_dev *eth_dev,
 	int rc = 0;
 
 	if (!nb_desc || nb_desc > MAX_RX_DESC_CNT) {
-		RTE_LOG(ERR, PMD, "nb_desc %d is invalid", nb_desc);
+		RTE_LOG(ERR, PMD, "nb_desc %d is invalid\n", nb_desc);
 		rc = -EINVAL;
 		goto out;
 	}
@@ -286,7 +303,7 @@ int bnxt_rx_queue_setup_op(struct rte_eth_dev *eth_dev,
 	rxq = rte_zmalloc_socket("bnxt_rx_queue", sizeof(struct bnxt_rx_queue),
 				 RTE_CACHE_LINE_SIZE, socket_id);
 	if (!rxq) {
-		RTE_LOG(ERR, PMD, "bnxt_rx_queue allocation failed!");
+		RTE_LOG(ERR, PMD, "bnxt_rx_queue allocation failed!\n");
 		rc = -ENOMEM;
 		goto out;
 	}
@@ -308,7 +325,7 @@ int bnxt_rx_queue_setup_op(struct rte_eth_dev *eth_dev,
 	/* Allocate RX ring hardware descriptors */
 	if (bnxt_alloc_rings(bp, queue_idx, NULL, rxq->rx_ring, rxq->cp_ring,
 			"rxr")) {
-		RTE_LOG(ERR, PMD, "ring_dma_zone_reserve for rx_ring failed!");
+		RTE_LOG(ERR, PMD, "ring_dma_zone_reserve for rx_ring failed!\n");
 		bnxt_rx_queue_release_op(rxq);
 		rc = -ENOMEM;
 		goto out;

@@ -388,6 +388,9 @@ static void eth_event_callback(uint8_t port_id,
  */
 static int all_ports_started(void);
 
+uint8_t tx_geneve = 0;
+uint8_t tx_vxlan = 0;
+
 /*
  * Helper function to check if socket is allready discovered.
  * If yes, return positive value. If not, return zero.
